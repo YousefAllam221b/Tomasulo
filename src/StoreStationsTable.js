@@ -15,7 +15,7 @@ export default function StoreStationsTable({ stations }) {
 			</thead>
 			<tbody>
 				{stations.map((station, i) => (
-					<tr>
+					<tr key={`Store_${station.key}_${i}`}>
 						<th>{station.key}</th>
 						<th>{station.busy}</th>
 						<th>{station.address}</th>

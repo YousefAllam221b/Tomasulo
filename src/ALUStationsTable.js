@@ -1,6 +1,6 @@
 import React from "react";
 import { Table } from "react-bootstrap";
-export default function ALUStationsTable({ stations }) {
+export default function ALUStationsTable({ isAdd, stations }) {
 	return (
 		<Table bordered hover>
 			<thead>
@@ -8,22 +8,22 @@ export default function ALUStationsTable({ stations }) {
 					<th>Key</th>
 					<th>Busy</th>
 					<th>Op</th>
-					<th>Vi</th>
+					<th>Vj</th>
 					<th>Vk</th>
-					<th>Qi</th>
+					<th>Qj</th>
 					<th>Qk</th>
 					<th>T</th>
 				</tr>
 			</thead>
 			<tbody>
 				{stations.map((station, i) => (
-					<tr>
+					<tr key={`ALU_${isAdd}_${station.key}_${i}`}>
 						<th>{station.key}</th>
 						<th>{station.busy}</th>
 						<th>{station.op}</th>
-						<th>{station.Vi}</th>
+						<th>{station.Vj}</th>
 						<th>{station.Vk}</th>
-						<th>{station.Qi}</th>
+						<th>{station.Qj}</th>
 						<th>{station.Qk}</th>
 						<th>{station.T}</th>
 					</tr>

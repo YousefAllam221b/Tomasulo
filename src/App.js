@@ -4,29 +4,28 @@ import "./App.css";
 import ALUStationsTable from "./ALUStationsTable";
 import LoadStationsTable from "./LoadStationsTable";
 import StoreStationsTable from "./StoreStationsTable";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
-
+import RegisterFileTable from "./RegisterFileTable";
 function App() {
 	let instructions = [
-		"L.D F1 1",
+		"L.D F6 1",
 		"L.D F2 2",
-		"ADD.D F3 F1 F2",
-		"MUL.D F4 F2 F3",
-		"SUB.D F5 F3 F4",
-		"DIV.D F10 F6 F7",
-		"S.D F10 44",
+		"MUL.D F0 F2 F4",
+		"SUB.D F8 F2 F6",
+		"DIV.D F10 F0 F6",
+		"ADD.D F6 F8 F2",
 	];
 
 	// Add, Sub, Div and Mul.
 	class ALUStation {
-		constructor(key, busy, op, Vi, Vk, Qi, Qk, T, instructionIndex) {
+		constructor(key, busy, op, Vj, Vk, Qj, Qk, T, instructionIndex) {
 			this.key = key;
 			this.busy = busy;
 			this.op = op;
-			this.Vi = Vi;
+			this.Vj = Vj;
 			this.Vk = Vk;
-			this.Qi = Qi;
+			this.Qj = Qj;
 			this.Qk = Qk;
 			this.T = T;
 			this.instructionIndex = instructionIndex;
@@ -79,7 +78,7 @@ function App() {
 	// Number of Stations, Size of Memory and Size of Register File.
 	const AddAndSubNumber = 3;
 	const MulAndDivNumber = 2;
-	const RegisterFileNumber = 64;
+	const RegisterFileNumber = 11;
 	const LoadNumber = 3;
 	const StoreNumber = 3;
 	const MemoryNumber = 100;
@@ -95,6 +94,7 @@ function App() {
 	const [QueueArray, setQueueArray] = useState([]);
 	const [ReadyRegisters, setReadyRegisters] = useState([]);
 	const [WriteMemory, setWriteMemory] = useState([]);
+	const [DetectChange, setDetectChange] = useState(false);
 
 	const handleSetup = () => {
 		fetchInstructions();
@@ -124,23 +124,26 @@ function App() {
 			StoreStationsInitial.push(station);
 		}
 		setStoreStations(StoreStationsInitial);
-		for (let index = 1; index <= RegisterFileNumber; index++) {
+		for (let index = 0; index <= RegisterFileNumber; index++) {
 			let register = new Register("F" + index, 0, 0, 0, 0, 0, 0);
 			RegisterFileInitial.push(register);
 		}
+		RegisterFileInitial[4].V = 4;
+		console.log(RegisterFileInitial);
 		setRegisterFile(RegisterFileInitial);
 		MemoryInitial = Array(MemoryNumber).fill(0);
+		MemoryInitial[1] = 5;
+		MemoryInitial[2] = 10;
+
 		setMemory(MemoryInitial);
 	};
 	// Initializing Stations, Memory and RegisterFile Data Structures
 
-	Memory[1] = 5;
-	Memory[2] = 3;
-
 	// Stations Latency
-	const LoadAndStoreLatency = 1;
+	const LoadAndStoreLatency = 2;
 	const AddAndSubLatency = 2;
-	const MulAndDivLatency = 3;
+	const MulLatency = 10;
+	const DivLatency = 40;
 
 	let [Clock, setClock] = useState(0);
 	let [QueueIndex, setQueueIndex] = useState(0);
@@ -174,7 +177,7 @@ function App() {
 	const decrementTime = () => {
 		for (let index = 0; index < AddAndSubNumber; index++) {
 			if (AddAndSubStations[index].busy === 1) {
-				if (AddAndSubStations[index].Qi === 0 && AddAndSubStations[index].Qk === 0) {
+				if (AddAndSubStations[index].Qj === 0 && AddAndSubStations[index].Qk === 0) {
 					let newAddAndSubStations = [...AddAndSubStations];
 					newAddAndSubStations[index].T -= 1;
 					setAddAndSubStations(newAddAndSubStations);
@@ -183,7 +186,7 @@ function App() {
 		}
 		for (let index = 0; index < MulAndDivNumber; index++) {
 			if (MulAndDivStations[index].busy === 1) {
-				if (MulAndDivStations[index].Qi === 0 && MulAndDivStations[index].Qk === 0) {
+				if (MulAndDivStations[index].Qj === 0 && MulAndDivStations[index].Qk === 0) {
 					let newMulAndDivStations = [...MulAndDivStations];
 					newMulAndDivStations[index].T -= 1;
 					setMulAndDivStations(newMulAndDivStations);
@@ -289,7 +292,7 @@ function App() {
 			if (AddAndSubStations[index].busy === 1 && AddAndSubStations[index].T === -1) {
 				switch (AddAndSubStations[index].op) {
 					case "ADD.D": {
-						let result = AddAndSubStations[index].Vi + AddAndSubStations[index].Vk;
+						let result = AddAndSubStations[index].Vj + AddAndSubStations[index].Vk;
 						newReadyResults.push({
 							key: AddAndSubStations[index].key,
 							value: result,
@@ -297,7 +300,7 @@ function App() {
 						});
 					}
 					case "SUB.D": {
-						let result = AddAndSubStations[index].Vi - AddAndSubStations[index].Vk;
+						let result = AddAndSubStations[index].Vj - AddAndSubStations[index].Vk;
 						newReadyResults.push({
 							key: AddAndSubStations[index].key,
 							value: result,
@@ -305,22 +308,22 @@ function App() {
 						});
 					}
 				}
-				let newAddAndSubStations = [...AddAndSubStations];
-				newAddAndSubStations[index].busy = 0;
-				newAddAndSubStations[index].Qi = 0;
-				newAddAndSubStations[index].Qk = 0;
-				newAddAndSubStations[index].Vi = 0;
-				newAddAndSubStations[index].Vk = 0;
-				newAddAndSubStations[index].T = 0;
-				newAddAndSubStations[index].instructionIndex = 0;
-				setAddAndSubStations(newAddAndSubStations);
+				// let newAddAndSubStations = [...AddAndSubStations];
+				// newAddAndSubStations[index].busy = 0;
+				// newAddAndSubStations[index].Qj = 0;
+				// newAddAndSubStations[index].Qk = 0;
+				// newAddAndSubStations[index].Vj = 0;
+				// newAddAndSubStations[index].Vk = 0;
+				// newAddAndSubStations[index].T = 0;
+				// newAddAndSubStations[index].instructionIndex = 0;
+				// setAddAndSubStations(newAddAndSubStations);
 			}
 		}
 		for (let index = 0; index < MulAndDivNumber; index++) {
 			if (MulAndDivStations[index].busy === 1 && MulAndDivStations[index].T === -1) {
 				switch (MulAndDivStations[index].op) {
 					case "MUL.D": {
-						let result = MulAndDivStations[index].Vi * MulAndDivStations[index].Vk;
+						let result = MulAndDivStations[index].Vj * MulAndDivStations[index].Vk;
 						newReadyResults.push({
 							key: MulAndDivStations[index].key,
 							value: result,
@@ -328,7 +331,7 @@ function App() {
 						});
 					}
 					case "DIV.D": {
-						let result = MulAndDivStations[index].Vi / MulAndDivStations[index].Vk;
+						let result = MulAndDivStations[index].Vj / MulAndDivStations[index].Vk;
 						newReadyResults.push({
 							key: MulAndDivStations[index].key,
 							value: result,
@@ -336,16 +339,16 @@ function App() {
 						});
 					}
 				}
-				let newMulAndDivStations = [...MulAndDivStations];
-				newMulAndDivStations[index].busy = 0;
-				newMulAndDivStations[index].Qi = 0;
-				newMulAndDivStations[index].Qk = 0;
-				newMulAndDivStations[index].Vi = 0;
-				newMulAndDivStations[index].Vk = 0;
-				newMulAndDivStations[index].T = 0;
-				newMulAndDivStations[index].instructionIndex = 0;
+				// let newMulAndDivStations = [...MulAndDivStations];
+				// newMulAndDivStations[index].busy = 0;
+				// newMulAndDivStations[index].Qj = 0;
+				// newMulAndDivStations[index].Qk = 0;
+				// newMulAndDivStations[index].Vj = 0;
+				// newMulAndDivStations[index].Vk = 0;
+				// newMulAndDivStations[index].T = 0;
+				// newMulAndDivStations[index].instructionIndex = 0;
 
-				setMulAndDivStations(newMulAndDivStations);
+				// setMulAndDivStations(newMulAndDivStations);
 			}
 		}
 		for (let index = 0; index < LoadNumber; index++) {
@@ -356,12 +359,12 @@ function App() {
 					value: result,
 					instructionIndex: MulAndDivStations[index].instructionIndex,
 				});
-				let newLoadStations = [...LoadStations];
-				newLoadStations[index].busy = 0;
-				newLoadStations[index].address = 0;
-				newLoadStations[index].instructionIndex = 0;
+				// let newLoadStations = [...LoadStations];
+				// newLoadStations[index].busy = 0;
+				// newLoadStations[index].address = 0;
+				// newLoadStations[index].instructionIndex = 0;
 
-				setLoadStations(newLoadStations);
+				// setLoadStations(newLoadStations);
 			}
 		}
 		for (let index = 0; index < StoreNumber; index++) {
@@ -372,65 +375,146 @@ function App() {
 					value: result,
 					instructionIndex: StoreStations[index].instructionIndex,
 				});
-				let newStoreStations = [...StoreStations];
-				newStoreStations[index].busy = 0;
-				newStoreStations[index].address = 0;
-				newStoreStations[index].V = 0;
-				newStoreStations[index].Q = 0;
-				newStoreStations[index].instructionIndex = 0;
+				// let newStoreStations = [...StoreStations];
+				// newStoreStations[index].busy = 0;
+				// newStoreStations[index].address = 0;
+				// newStoreStations[index].V = 0;
+				// newStoreStations[index].Q = 0;
+				// newStoreStations[index].instructionIndex = 0;
 
-				setStoreStations(newStoreStations);
+				// setStoreStations(newStoreStations);
 			}
 		}
 		setReadyRegisters([...ReadyRegisters, ...newReadyResults]);
 		setWriteMemory([...WriteMemory, ...newWriteMemory]);
+		setDetectChange(!DetectChange);
 	};
 
 	useEffect(() => {
-		if (ReadyRegisters.length !== 0) {
-			let oneReady = ReadyRegisters.sort((a, b) => a.instructionIndex - b.instructionIndex)[0];
-			for (let index = 0; index < AddAndSubNumber; index++) {
-				if (oneReady.key === AddAndSubStations[index].Qi) {
-					let newAddAndSubStations = [...AddAndSubStations];
-					newAddAndSubStations[index].Qi = 0;
-					newAddAndSubStations[index].Vi = oneReady.value;
-					setAddAndSubStations(newAddAndSubStations);
-				} else if (oneReady.key === AddAndSubStations[index].Qk) {
-					let newAddAndSubStations = [...AddAndSubStations];
-					newAddAndSubStations[index].Qk = 0;
-					newAddAndSubStations[index].Vk = oneReady.value;
-					setAddAndSubStations(newAddAndSubStations);
-				}
+		console.log(ReadyRegisters);
+		if (ReadyRegisters.length !== 0 || WriteMemory.length !== 0) {
+			console.log("i am there");
+			let firstInReady = ReadyRegisters.sort((a, b) => a.instructionIndex - b.instructionIndex)[0];
+			let firstInWrite = WriteMemory.sort((a, b) => a.instructionIndex - b.instructionIndex)[0];
+			let isReady;
+			console.log(firstInReady);
+			console.log("////////////");
+			if (firstInReady && firstInWrite) {
+				isReady = firstInReady.instructionIndex > firstInWrite.instructionIndex ? true : false;
+			} else if (firstInReady) {
+				isReady = true;
+			} else if (firstInWrite) {
+				isReady = false;
 			}
-			for (let index = 0; index < MulAndDivNumber; index++) {
-				if (oneReady.key === MulAndDivStations[index].Qi) {
-					let newMulAndDivStations = [...MulAndDivStations];
-					newMulAndDivStations[index].Qi = 0;
-					newMulAndDivStations[index].Vi = oneReady.value;
-					setMulAndDivStations(newMulAndDivStations);
-				} else if (key === MulAndDivStations[index].Qk) {
-					let newMulAndDivStations = [...MulAndDivStations];
-					newMulAndDivStations[index].Qk = 0;
-					newMulAndDivStations[index].Vk = oneReady.value;
-					setMulAndDivStations(newMulAndDivStations);
+			if (isReady) {
+				for (let index = 0; index < AddAndSubNumber; index++) {
+					if (firstInReady.key === AddAndSubStations[index].Qj) {
+						let newAddAndSubStations = [...AddAndSubStations];
+						newAddAndSubStations[index].Qj = 0;
+						newAddAndSubStations[index].Vj = firstInReady.value;
+						setAddAndSubStations(newAddAndSubStations);
+					} else if (firstInReady.key === AddAndSubStations[index].Qk) {
+						let newAddAndSubStations = [...AddAndSubStations];
+						newAddAndSubStations[index].Qk = 0;
+						newAddAndSubStations[index].Vk = firstInReady.value;
+						setAddAndSubStations(newAddAndSubStations);
+					}
+					if (AddAndSubStations[index].key === firstInReady.key) {
+						let newAddAndSubStations = [...AddAndSubStations];
+						newAddAndSubStations[index].busy = 0;
+						newAddAndSubStations[index].op = "";
+						newAddAndSubStations[index].Qj = 0;
+						newAddAndSubStations[index].Qk = 0;
+						newAddAndSubStations[index].Vj = 0;
+						newAddAndSubStations[index].Vk = 0;
+						newAddAndSubStations[index].T = 0;
+						newAddAndSubStations[index].instructionIndex = 0;
+						setAddAndSubStations(newAddAndSubStations);
+					}
 				}
-			}
-			for (let index = 0; index < StoreNumber; index++) {
-				if (key === StoreStations[index].Q) {
-					StoreStations[index].Q = 0;
-					StoreStations[index].V = value;
+				for (let index = 0; index < MulAndDivNumber; index++) {
+					if (firstInReady.key === MulAndDivStations[index].Qj) {
+						let newMulAndDivStations = [...MulAndDivStations];
+						newMulAndDivStations[index].Qj = 0;
+						newMulAndDivStations[index].Vj = firstInReady.value;
+						setMulAndDivStations(newMulAndDivStations);
+					} else if (firstInReady.key === MulAndDivStations[index].Qk) {
+						let newMulAndDivStations = [...MulAndDivStations];
+						newMulAndDivStations[index].Qk = 0;
+						newMulAndDivStations[index].Vk = firstInReady.value;
+						setMulAndDivStations(newMulAndDivStations);
+					}
+					if (firstInReady.key === MulAndDivStations[index].key) {
+						let newMulAndDivStations = [...MulAndDivStations];
+						newMulAndDivStations[index].busy = 0;
+						newMulAndDivStations[index].op = "";
+						newMulAndDivStations[index].Qj = 0;
+						newMulAndDivStations[index].Qk = 0;
+						newMulAndDivStations[index].Vj = 0;
+						newMulAndDivStations[index].Vk = 0;
+						newMulAndDivStations[index].T = 0;
+						newMulAndDivStations[index].instructionIndex = 0;
+
+						setMulAndDivStations(newMulAndDivStations);
+					}
 				}
+				for (let index = 0; index < LoadNumber; index++) {
+					if (LoadStations[index].key === firstInReady.key) {
+						let newLoadStations = [...LoadStations];
+						newLoadStations[index].busy = 0;
+						newLoadStations[index].address = 0;
+						newLoadStations[index].T = 0;
+
+						setLoadStations(newLoadStations);
+					}
+				}
+				for (let index = 0; index < StoreNumber; index++) {
+					if (firstInReady.key === StoreStations[index].Q) {
+						let newStoreStations = [...StoreStations];
+						newStoreStations[index].Q = 0;
+						newStoreStations[index].V = firstInReady.value;
+						setStoreStations(newStoreStations);
+					}
+				}
+				for (let index = 0; index < RegisterFileNumber; index++) {
+					if (firstInReady.key === RegisterFile[index].Q) {
+						let newRegisterFile = [...RegisterFile];
+						newRegisterFile[index].Q = 0;
+						newRegisterFile[index].V = firstInReady.value;
+						setRegisterFile(newRegisterFile);
+					}
+				}
+				let newReadyRegisters = [...ReadyRegisters].filter(
+					(ready) => ready.key !== firstInReady.key
+				);
+				setReadyRegisters(newReadyRegisters);
+			} else {
+				Memory[firstInWrite.key] = firstInWrite.value;
+				for (let index = 0; index < StoreNumber; index++) {
+					if (StoreStations[index].key === firstInWrite.key) {
+						let newStoreStations = [...StoreStations];
+						newStoreStations[index].busy = 0;
+						newStoreStations[index].address = 0;
+						newStoreStations[index].V = 0;
+						newStoreStations[index].Q = 0;
+						newStoreStations[index].instructionIndex = 0;
+
+						setStoreStations(newStoreStations);
+					}
+				}
+				let newWriteMemory = [...WriteMemory].filter((write) => write.key !== firstInWrite.key);
+				setWriteMemory(newWriteMemory);
 			}
 		}
-	}, [ReadyRegisters]);
+	}, [DetectChange]);
 
 	const runCycle = () => {
 		decrementTime();
 		checkFinished();
 		if (QueueIndex !== QueueArray.length) {
-			console.log(QueueIndex);
+			// console.log(QueueIndex);
 			let currentInstruction = QueueArray[QueueIndex];
-			console.log(currentInstruction);
+			// console.log(currentInstruction);
 			let opCode = currentInstruction.op;
 			let destination = currentInstruction.destination;
 			let src1 = currentInstruction.src1;
@@ -452,15 +536,15 @@ function App() {
 									let src1Value = getRegisterValue(src1);
 									let src2Value = getRegisterValue(src2);
 									if (typeof src1Value === "string") {
-										newAddAndSubStations[index].Qi = src1Value;
+										newAddAndSubStations[index].Qk = src1Value;
 									} else {
-										newAddAndSubStations[index].Vi = src1Value;
+										newAddAndSubStations[index].Vk = src1Value;
 									}
 
 									if (typeof src2Value === "string") {
-										newAddAndSubStations[index].Qk = src2Value;
+										newAddAndSubStations[index].Qj = src2Value;
 									} else {
-										newAddAndSubStations[index].Vk = src2Value;
+										newAddAndSubStations[index].Vj = src2Value;
 									}
 									setAddAndSubStations(newAddAndSubStations);
 									setRegisterKey(destination, stationKey);
@@ -483,15 +567,17 @@ function App() {
 									let newMulAndDivStations = [...MulAndDivStations];
 									newMulAndDivStations[index].busy = 1;
 									newMulAndDivStations[index].op = opCode;
-									newMulAndDivStations[index].T = MulAndDivLatency;
+									if (opCode === "MUL.D") newMulAndDivStations[index].T = MulLatency;
+									else newMulAndDivStations[index].T = DivLatency;
+
 									newMulAndDivStations[index].instructionIndex = QueueIndex;
 
 									let src1Value = getRegisterValue(src1);
 									let src2Value = getRegisterValue(src2);
 									if (typeof src1Value === "string") {
-										newMulAndDivStations[index].Qi = src1Value;
+										newMulAndDivStations[index].Qj = src1Value;
 									} else {
-										newMulAndDivStations[index].Vi = src1Value;
+										newMulAndDivStations[index].Vj = src1Value;
 									}
 
 									if (typeof src2Value === "string") {
@@ -571,31 +657,36 @@ function App() {
 		// console.log(Memory);
 		// console.log("/////////////////////////");
 		setClock(Clock + 1);
+		console.log(RegisterFile);
 	};
 
 	return (
 		<Container className="App">
-			<h1>{Clock}</h1>
-			<Button onClick={handleSetup}>Start</Button>
-			<Button onClick={runCycle}>Next Cycle</Button>
 			<Row>
 				<Col sm={6}>
 					<h3 className="fitWidth">AddAndSubStations</h3>
-					<ALUStationsTable stations={AddAndSubStations} key="AddAndSubStations" />
+					<ALUStationsTable isAdd={true} stations={AddAndSubStations} key="AddAndSubStations" />
 				</Col>
 				<Col sm={6}>
 					<h3 className="fitWidth">MulAndDivStations</h3>
-					<ALUStationsTable stations={MulAndDivStations} key="MulAndDivStations" />
+					<ALUStationsTable isAdd={false} stations={MulAndDivStations} key="MulAndDivStations" />
 				</Col>
 			</Row>
 			<Row>
 				<Col sm={4}>
 					<h3 className="fitWidth">LoadStations</h3>
 					<LoadStationsTable stations={LoadStations} key="LoadStations" />
+					<h1>{Clock}</h1>
+					<Button onClick={handleSetup}>Start</Button>
+					<Button onClick={runCycle}>Next Cycle</Button>
 				</Col>
 				<Col sm={4}>
 					<h3 className="fitWidth">StoreStations</h3>
 					<StoreStationsTable stations={StoreStations} key="StoreStations" />
+				</Col>
+				<Col className="ms-auto" sm={2}>
+					<h3 className="fitWidth">RegisterFile</h3>
+					<RegisterFileTable registers={RegisterFile} key="RegisterFile" />
 				</Col>
 			</Row>
 		</Container>

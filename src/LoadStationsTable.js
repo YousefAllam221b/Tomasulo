@@ -13,7 +13,7 @@ export default function LoadStationsTable({ stations }) {
 			</thead>
 			<tbody>
 				{stations.map((station, i) => (
-					<tr>
+					<tr key={`Load_${station.key}_${i}`}>
 						<th>{station.key}</th>
 						<th>{station.busy}</th>
 						<th>{station.address}</th>
