@@ -6,6 +6,7 @@ import StoreStationsTable from "./StoreStationsTable";
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 import RegisterFileTable from "./RegisterFileTable";
+import QueueTable from "./QueueTable";
 function App() {
 	let instructions = ["L.D F0 80", "MUL.D F4 F0 F2", "S.D F4 80"];
 
@@ -169,6 +170,11 @@ function App() {
 		for (let index = 0; index < AddAndSubNumber; index++) {
 			if (AddAndSubStations[index].busy === 1) {
 				if (AddAndSubStations[index].Qj === 0 && AddAndSubStations[index].Qk === 0) {
+					if (AddAndSubStations[index].T === AddAndSubLatency) {
+						let newQueueArray = [...QueueArray];
+						newQueueArray[LoadStations[index].instructionIndex].execStart = Clock + 1;
+						setQueueArray(newQueueArray);
+					}
 					let newAddAndSubStations = [...AddAndSubStations];
 					newAddAndSubStations[index].T -= 1;
 					setAddAndSubStations(newAddAndSubStations);
@@ -178,6 +184,23 @@ function App() {
 		for (let index = 0; index < MulAndDivNumber; index++) {
 			if (MulAndDivStations[index].busy === 1) {
 				if (MulAndDivStations[index].Qj === 0 && MulAndDivStations[index].Qk === 0) {
+					switch (MulAndDivStations[index].op) {
+						case "MUL.D": {
+							if (MulAndDivStations[index].T === MulLatency) {
+								let newQueueArray = [...QueueArray];
+								newQueueArray[MulAndDivStations[index].instructionIndex].execStart = Clock + 1;
+								setQueueArray(newQueueArray);
+							}
+						}
+						case "DIV.D": {
+							if (MulAndDivStations[index].T === DivLatency) {
+								let newQueueArray = [...QueueArray];
+								newQueueArray[MulAndDivStations[index].instructionIndex].execStart = Clock + 1;
+								setQueueArray(newQueueArray);
+							}
+						}
+					}
+
 					let newMulAndDivStations = [...MulAndDivStations];
 					newMulAndDivStations[index].T -= 1;
 					setMulAndDivStations(newMulAndDivStations);
@@ -186,6 +209,11 @@ function App() {
 		}
 		for (let index = 0; index < LoadNumber; index++) {
 			if (LoadStations[index].busy === 1) {
+				if (LoadStations[index].T === LoadAndStoreLatency) {
+					let newQueueArray = [...QueueArray];
+					newQueueArray[LoadStations[index].instructionIndex].execStart = Clock + 1;
+					setQueueArray(newQueueArray);
+				}
 				let newLoadStations = [...LoadStations];
 				newLoadStations[index].T -= 1;
 				setLoadStations(newLoadStations);
@@ -194,6 +222,11 @@ function App() {
 		for (let index = 0; index < StoreNumber; index++) {
 			if (StoreStations[index].busy === 1) {
 				if (StoreStations[index].Q == 0) {
+					if (StoreStations[index].T === LoadAndStoreLatency) {
+						let newQueueArray = [...QueueArray];
+						newQueueArray[StoreStations[index].instructionIndex].execStart = Clock + 1;
+						setQueueArray(newQueueArray);
+					}
 					StoreStations[index].T -= 1;
 					let newStoreStations = [...StoreStations];
 					setStoreStations(newStoreStations);
@@ -279,24 +312,33 @@ function App() {
 		let newReadyResults = [];
 		let newWriteMemory = [];
 		for (let index = 0; index < AddAndSubNumber; index++) {
-			if (AddAndSubStations[index].busy === 1 && AddAndSubStations[index].T === -1) {
-				switch (AddAndSubStations[index].op) {
-					case "ADD.D": {
-						let result = AddAndSubStations[index].Vj + AddAndSubStations[index].Vk;
-						newReadyResults.push({
-							key: AddAndSubStations[index].key,
-							value: result,
-							instructionIndex: AddAndSubStations[index].instructionIndex,
-						});
+			if (AddAndSubStations[index].busy === 1) {
+				if (AddAndSubStations[index].T === -1) {
+					switch (AddAndSubStations[index].op) {
+						case "ADD.D": {
+							let result = AddAndSubStations[index].Vj + AddAndSubStations[index].Vk;
+							newReadyResults.push({
+								key: AddAndSubStations[index].key,
+								value: result,
+								instructionIndex: AddAndSubStations[index].instructionIndex,
+							});
+						}
+						case "SUB.D": {
+							let result = AddAndSubStations[index].Vj - AddAndSubStations[index].Vk;
+							newReadyResults.push({
+								key: AddAndSubStations[index].key,
+								value: result,
+								instructionIndex: AddAndSubStations[index].instructionIndex,
+							});
+						}
 					}
-					case "SUB.D": {
-						let result = AddAndSubStations[index].Vj - AddAndSubStations[index].Vk;
-						newReadyResults.push({
-							key: AddAndSubStations[index].key,
-							value: result,
-							instructionIndex: AddAndSubStations[index].instructionIndex,
-						});
-					}
+					let newQueueArray = [...QueueArray];
+					newQueueArray[AddAndSubStations[index].instructionIndex].writeBack = Clock + 1;
+					setQueueArray(newQueueArray);
+				} else if (AddAndSubStations[index].T === 0) {
+					let newQueueArray = [...QueueArray];
+					newQueueArray[AddAndSubStations[index].instructionIndex].execEnd = Clock + 1;
+					setQueueArray(newQueueArray);
 				}
 				// let newAddAndSubStations = [...AddAndSubStations];
 				// newAddAndSubStations[index].busy = 0;
@@ -310,25 +352,35 @@ function App() {
 			}
 		}
 		for (let index = 0; index < MulAndDivNumber; index++) {
-			if (MulAndDivStations[index].busy === 1 && MulAndDivStations[index].T === -1) {
-				switch (MulAndDivStations[index].op) {
-					case "MUL.D": {
-						let result = MulAndDivStations[index].Vj * MulAndDivStations[index].Vk;
-						newReadyResults.push({
-							key: MulAndDivStations[index].key,
-							value: result,
-							instructionIndex: MulAndDivStations[index].instructionIndex,
-						});
+			if (MulAndDivStations[index].busy === 1) {
+				if (MulAndDivStations[index].T === -1) {
+					switch (MulAndDivStations[index].op) {
+						case "MUL.D": {
+							let result = MulAndDivStations[index].Vj * MulAndDivStations[index].Vk;
+							newReadyResults.push({
+								key: MulAndDivStations[index].key,
+								value: result,
+								instructionIndex: MulAndDivStations[index].instructionIndex,
+							});
+						}
+						case "DIV.D": {
+							let result = MulAndDivStations[index].Vj / MulAndDivStations[index].Vk;
+							newReadyResults.push({
+								key: MulAndDivStations[index].key,
+								value: result,
+								instructionIndex: MulAndDivStations[index].instructionIndex,
+							});
+						}
 					}
-					case "DIV.D": {
-						let result = MulAndDivStations[index].Vj / MulAndDivStations[index].Vk;
-						newReadyResults.push({
-							key: MulAndDivStations[index].key,
-							value: result,
-							instructionIndex: MulAndDivStations[index].instructionIndex,
-						});
-					}
+					let newQueueArray = [...QueueArray];
+					newQueueArray[MulAndDivStations[index].instructionIndex].writeBack = Clock + 1;
+					setQueueArray(newQueueArray);
+				} else if (MulAndDivStations[index].T === 0) {
+					let newQueueArray = [...QueueArray];
+					newQueueArray[MulAndDivStations[index].instructionIndex].execEnd = Clock + 1;
+					setQueueArray(newQueueArray);
 				}
+
 				// let newMulAndDivStations = [...MulAndDivStations];
 				// newMulAndDivStations[index].busy = 0;
 				// newMulAndDivStations[index].Qj = 0;
@@ -342,13 +394,22 @@ function App() {
 			}
 		}
 		for (let index = 0; index < LoadNumber; index++) {
-			if (LoadStations[index].busy === 1 && LoadStations[index].T === -1) {
-				let result = Memory[LoadStations[index].address];
-				newReadyResults.push({
-					key: LoadStations[index].key,
-					value: result,
-					instructionIndex: MulAndDivStations[index].instructionIndex,
-				});
+			if (LoadStations[index].busy === 1) {
+				if (LoadStations[index].T === -1) {
+					let result = Memory[LoadStations[index].address];
+					newReadyResults.push({
+						key: LoadStations[index].key,
+						value: result,
+						instructionIndex: MulAndDivStations[index].instructionIndex,
+					});
+					let newQueueArray = [...QueueArray];
+					newQueueArray[LoadStations[index].instructionIndex].writeBack = Clock + 1;
+					setQueueArray(newQueueArray);
+				} else if (LoadStations[index].T === 0) {
+					let newQueueArray = [...QueueArray];
+					newQueueArray[LoadStations[index].instructionIndex].execEnd = Clock + 1;
+					setQueueArray(newQueueArray);
+				}
 				// let newLoadStations = [...LoadStations];
 				// newLoadStations[index].busy = 0;
 				// newLoadStations[index].address = 0;
@@ -358,14 +419,24 @@ function App() {
 			}
 		}
 		for (let index = 0; index < StoreNumber; index++) {
-			if (StoreStations[index].busy === 1 && StoreStations[index].T === -1) {
-				let result = StoreStations[index].V;
-				newWriteMemory.push({
-					address: StoreStations[index].address,
-					value: result,
-					instructionIndex: StoreStations[index].instructionIndex,
-					key: StoreStations[index].key,
-				});
+			if (StoreStations[index].busy === 1) {
+				if (StoreStations[index].T === -1) {
+					let newQueueArray = [...QueueArray];
+					newQueueArray[StoreStations[index].instructionIndex].writeBack = Clock + 1;
+					setQueueArray(newQueueArray);
+
+					let result = StoreStations[index].V;
+					newWriteMemory.push({
+						address: StoreStations[index].address,
+						value: result,
+						instructionIndex: StoreStations[index].instructionIndex,
+						key: StoreStations[index].key,
+					});
+				} else if (StoreStations[index].T === 0) {
+					let newQueueArray = [...QueueArray];
+					newQueueArray[StoreStations[index].instructionIndex].execEnd = Clock + 1;
+					setQueueArray(newQueueArray);
+				}
 				// let newStoreStations = [...StoreStations];
 				// newStoreStations[index].busy = 0;
 				// newStoreStations[index].address = 0;
@@ -537,7 +608,9 @@ function App() {
 									break;
 								}
 							}
-
+							let newQueueArray = [...QueueArray];
+							newQueueArray[QueueIndex].issue = Clock + 1;
+							setQueueArray(newQueueArray);
 							setQueueIndex(QueueIndex + 1);
 						}
 					}
@@ -576,7 +649,9 @@ function App() {
 									break;
 								}
 							}
-
+							let newQueueArray = [...QueueArray];
+							newQueueArray[QueueIndex].issue = Clock + 1;
+							setQueueArray(newQueueArray);
 							setQueueIndex(QueueIndex + 1);
 						}
 					}
@@ -598,6 +673,9 @@ function App() {
 									break;
 								}
 							}
+							let newQueueArray = [...QueueArray];
+							newQueueArray[QueueIndex].issue = Clock + 1;
+							setQueueArray(newQueueArray);
 							setQueueIndex(QueueIndex + 1);
 						}
 					}
@@ -621,7 +699,9 @@ function App() {
 									break;
 								}
 							}
-
+							let newQueueArray = [...QueueArray];
+							newQueueArray[QueueIndex].issue = Clock + 1;
+							setQueueArray(newQueueArray);
 							setQueueIndex(QueueIndex + 1);
 						}
 					}
@@ -633,6 +713,7 @@ function App() {
 
 	return (
 		<Container className="App">
+			<QueueTable instructions={QueueArray} />
 			<Row>
 				<Col sm={6}>
 					<h3 className="fitWidth">AddAndSubStations</h3>
