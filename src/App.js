@@ -250,11 +250,18 @@ function App() {
 
 	// Gets the Value or Q (the Key) of the station that the Register is waiting for.
 	const getRegisterValue = (key) => {
-		for (let index = 0; index < RegisterFileNumber; index++) {
+		console.log("/////////////////////////");
+
+		console.log("########################");
+		console.log(key);
+		console.log("########################");
+		for (let index = 0; index <= RegisterFileNumber; index++) {
 			if (RegisterFile[index].key === key) {
-				if (RegisterFile[index].Q == 0) {
+				if (RegisterFile[index].Q === 0) {
+					console.log(RegisterFile[index].V);
 					return RegisterFile[index].V;
 				} else {
+					console.log(RegisterFile[index].Q);
 					return RegisterFile[index].Q;
 				}
 			}
@@ -455,7 +462,6 @@ function App() {
 	};
 
 	useEffect(() => {
-		console.log(ReadyRegisters);
 		if (ReadyRegisters.length !== 0 || WriteMemory.length !== 0) {
 			let firstInReady = ReadyRegisters.sort((a, b) => a.instructionIndex - b.instructionIndex)[0];
 			let firstInWrite = WriteMemory.sort((a, b) => a.instructionIndex - b.instructionIndex)[0];
@@ -479,8 +485,6 @@ function App() {
 						setAddAndSubStations(newAddAndSubStations);
 					}
 					if (AddAndSubStations[index].key === firstInReady.key) {
-						console.log(AddAndSubStations[index]);
-						console.log(AddAndSubStations[index].instructionIndex);
 						let newQueueArray = [...QueueArray];
 						newQueueArray[AddAndSubStations[index].instructionIndex].writeBack = Clock;
 						setQueueArray(newQueueArray);
@@ -563,7 +567,6 @@ function App() {
 				);
 				setReadyRegisters(newReadyRegisters);
 			} else {
-				console.log(firstInWrite);
 				Memory[firstInWrite.address] = firstInWrite.value;
 				for (let index = 0; index < StoreNumber; index++) {
 					if (StoreStations[index].key === firstInWrite.key) {
@@ -608,16 +611,16 @@ function App() {
 									newAddAndSubStations[index].instructionIndex = QueueIndex;
 									let src1Value = getRegisterValue(src1);
 									let src2Value = getRegisterValue(src2);
-									if (typeof src1Value === "string") {
-										newAddAndSubStations[index].Qk = src1Value;
-									} else {
-										newAddAndSubStations[index].Vk = src1Value;
-									}
 
 									if (typeof src2Value === "string") {
-										newAddAndSubStations[index].Qj = src2Value;
+										newAddAndSubStations[index].Qk = src2Value;
 									} else {
-										newAddAndSubStations[index].Vj = src2Value;
+										newAddAndSubStations[index].Vk = src2Value;
+									}
+									if (typeof src1Value === "string") {
+										newAddAndSubStations[index].Qj = src1Value;
+									} else {
+										newAddAndSubStations[index].Vj = src1Value;
 									}
 									setAddAndSubStations(newAddAndSubStations);
 									setRegisterKey(destination, stationKey);
