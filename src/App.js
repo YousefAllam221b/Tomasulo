@@ -3,13 +3,22 @@ import "./App.css";
 import ALUStationsTable from "./ALUStationsTable";
 import LoadStationsTable from "./LoadStationsTable";
 import StoreStationsTable from "./StoreStationsTable";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Col, Container, ListGroup, ListGroupItem, Row } from "react-bootstrap";
 import RegisterFileTable from "./RegisterFileTable";
 import QueueTable from "./QueueTable";
 import SetupForm from "./SetupForm";
 function App() {
-	const [instructions, setInstructions] = useState([]);
+	const [instructions, setInstructions] = useState([
+		"L.D F6 6",
+		"L.D F4 4",
+		"L.D F2 2",
+		"MULT.D F0 F2 F4",
+		"SUB.D F8 F2 F6",
+		"DIV.D F10 F0 F6",
+		"ADD.D F6 F8 F2",
+		"S.D F6 7",
+	]);
 
 	// Add, Sub, Div and Mul.
 	class ALUStation {
@@ -71,10 +80,22 @@ function App() {
 	// Initializing Stations, Memory and RegisterFile Data Structures
 
 	// Stations Latency
-	const LoadAndStoreLatency = 8;
-	const AddAndSubLatency = 4;
-	const MulLatency = 6;
-	const DivLatency = 40;
+
+	const [AddLatency, setAddLatency] = useState(4);
+	const [SubLatency, setSubLatency] = useState(3);
+
+	const [MulLatency, setMulLatency] = useState(6);
+	const [DivLatency, setDivLatency] = useState(40);
+
+	const [LoadLatency, setLoadLatency] = useState(8);
+	const [StoreLatency, setStoreLatency] = useState(7);
+
+	const AddLatencyRef = useRef();
+	const SubLatencyRef = useRef();
+	const MulLatencyRef = useRef();
+	const DivLatencyRef = useRef();
+	const LoadLatencyRef = useRef();
+	const StoreLatencyRef = useRef();
 
 	// Number of Stations, Size of Memory and Size of Register File.
 	const AddAndSubNumber = 3;
@@ -97,6 +118,11 @@ function App() {
 	const [WriteMemory, setWriteMemory] = useState([]);
 	const [DetectChange, setDetectChange] = useState(false);
 	const [Start, setStart] = useState(false);
+
+	const handleDeleteInstruction = (index) => {
+		let newInstructions = instructions.filter((_, i) => i !== index);
+		setInstructions(newInstructions);
+	};
 
 	const handleSetup = () => {
 		fetchInstructions();
@@ -133,7 +159,17 @@ function App() {
 
 		setRegisterFile(RegisterFileInitial);
 		MemoryInitial = Array(MemoryNumber).fill(0);
+		MemoryInitial[2] = 2;
+		MemoryInitial[4] = 4;
+		MemoryInitial[6] = 6;
+
 		setMemory(MemoryInitial);
+		if (AddLatencyRef.current.value) setAddLatency(parseInt(AddLatencyRef.current.value));
+		if (SubLatencyRef.current.value) setSubLatency(parseInt(SubLatencyRef.current.value));
+		if (MulLatencyRef.current.value) setMulLatency(parseInt(MulLatencyRef.current.value));
+		if (DivLatencyRef.current.value) setDivLatency(parseInt(DivLatencyRef.current.value));
+		if (LoadLatencyRef.current.value) setLoadLatency(parseInt(LoadLatencyRef.current.value));
+		if (StoreLatencyRef.current.value) setStoreLatency(parseInt(StoreLatencyRef.current.value));
 		setStart(true);
 	};
 
@@ -170,11 +206,20 @@ function App() {
 		for (let index = 0; index < AddAndSubNumber; index++) {
 			if (AddAndSubStations[index].busy === 1) {
 				if (AddAndSubStations[index].Qj === 0 && AddAndSubStations[index].Qk === 0) {
-					if (AddAndSubStations[index].T === AddAndSubLatency) {
-						let newQueueArray = [...QueueArray];
-						newQueueArray[AddAndSubStations[index].instructionIndex].execStart = Clock + 1;
-						setQueueArray(newQueueArray);
+					if (AddAndSubStations[index].op === "ADD.D") {
+						if (AddAndSubStations[index].T === AddLatency) {
+							let newQueueArray = [...QueueArray];
+							newQueueArray[AddAndSubStations[index].instructionIndex].execStart = Clock + 1;
+							setQueueArray(newQueueArray);
+						}
+					} else if (AddAndSubStations[index].op === "SUB.D") {
+						if (AddAndSubStations[index].T === SubLatency) {
+							let newQueueArray = [...QueueArray];
+							newQueueArray[AddAndSubStations[index].instructionIndex].execStart = Clock + 1;
+							setQueueArray(newQueueArray);
+						}
 					}
+
 					let newAddAndSubStations = [...AddAndSubStations];
 					newAddAndSubStations[index].T -= 1;
 					setAddAndSubStations(newAddAndSubStations);
@@ -209,7 +254,7 @@ function App() {
 		}
 		for (let index = 0; index < LoadNumber; index++) {
 			if (LoadStations[index].busy === 1) {
-				if (LoadStations[index].T === LoadAndStoreLatency) {
+				if (LoadStations[index].T === LoadLatency) {
 					let newQueueArray = [...QueueArray];
 					newQueueArray[LoadStations[index].instructionIndex].execStart = Clock + 1;
 					setQueueArray(newQueueArray);
@@ -222,7 +267,7 @@ function App() {
 		for (let index = 0; index < StoreNumber; index++) {
 			if (StoreStations[index].busy === 1) {
 				if (StoreStations[index].Q == 0) {
-					if (StoreStations[index].T === LoadAndStoreLatency) {
+					if (StoreStations[index].T === StoreLatency) {
 						let newQueueArray = [...QueueArray];
 						newQueueArray[StoreStations[index].instructionIndex].execStart = Clock + 1;
 						setQueueArray(newQueueArray);
@@ -290,6 +335,7 @@ function App() {
 				break;
 			}
 		}
+		console.log(freeStationKey);
 		return freeStationKey;
 	};
 
@@ -373,7 +419,7 @@ function App() {
 					newReadyResults.push({
 						key: LoadStations[index].key,
 						value: result,
-						instructionIndex: MulAndDivStations[index].instructionIndex,
+						instructionIndex: LoadStations[index].instructionIndex,
 					});
 				} else if (LoadStations[index].T === 0) {
 					let newQueueArray = [...QueueArray];
@@ -550,7 +596,9 @@ function App() {
 									let newAddAndSubStations = [...AddAndSubStations];
 									newAddAndSubStations[index].busy = 1;
 									newAddAndSubStations[index].op = opCode;
-									newAddAndSubStations[index].T = AddAndSubLatency;
+									if (opCode === "ADD.D") newAddAndSubStations[index].T = AddLatency;
+									else newAddAndSubStations[index].T = SubLatency;
+
 									newAddAndSubStations[index].instructionIndex = QueueIndex;
 									let src1Value = getRegisterValue(src1);
 									let src2Value = getRegisterValue(src2);
@@ -622,12 +670,12 @@ function App() {
 					{
 						let stationKey = LoadStationsChecker();
 						if (stationKey) {
-							for (let index = 0; index < MulAndDivNumber; index++) {
+							for (let index = 0; index < LoadNumber; index++) {
 								if (LoadStations[index].key === stationKey) {
 									let newLoadStations = [...LoadStations];
 									newLoadStations[index].busy = 1;
 									newLoadStations[index].address = parseInt(src1);
-									newLoadStations[index].T = LoadAndStoreLatency;
+									newLoadStations[index].T = LoadLatency;
 									newLoadStations[index].instructionIndex = QueueIndex;
 
 									setLoadStations(newLoadStations);
@@ -646,12 +694,12 @@ function App() {
 					{
 						let stationKey = StoreStationsChecker();
 						if (stationKey) {
-							for (let index = 0; index < MulAndDivNumber; index++) {
+							for (let index = 0; index < StoreNumber; index++) {
 								if (StoreStations[index].key === stationKey) {
 									let newStoreStations = [...StoreStations];
 									newStoreStations[index].busy = 1;
 									newStoreStations[index].address = src1;
-									newStoreStations[index].T = LoadAndStoreLatency;
+									newStoreStations[index].T = StoreLatency;
 									newStoreStations[index].instructionIndex = QueueIndex;
 
 									let value = getRegisterValue(destination);
@@ -677,10 +725,22 @@ function App() {
 		<Container className="App">
 			{!Start && (
 				<>
-					<SetupForm instructions={instructions} setInstructions={setInstructions} />
+					<SetupForm
+						instructions={instructions}
+						setInstructions={setInstructions}
+						AddLatencyRef={AddLatencyRef}
+						SubLatencyRef={SubLatencyRef}
+						MulLatencyRef={MulLatencyRef}
+						DivLatencyRef={DivLatencyRef}
+						LoadLatencyRef={LoadLatencyRef}
+						StoreLatencyRef={StoreLatencyRef}
+					/>
 					<ListGroup>
-						{instructions.map((instruction) => (
-							<ListGroupItem>{instruction}</ListGroupItem>
+						{instructions.map((instruction, i) => (
+							<ListGroupItem className="d-flex justify-content-between" key={instruction}>
+								<h6 className="fitWidth">{instruction}</h6>
+								<Button onClick={() => handleDeleteInstruction(i)}>Delete</Button>
+							</ListGroupItem>
 						))}
 					</ListGroup>
 					<Button onClick={handleSetup}>Start</Button>

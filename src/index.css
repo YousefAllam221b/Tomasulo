@@ -26,3 +26,8 @@ code {
 	width: 100vw;
 	margin: auto;
 }
+
+.singleSelect > span {
+	font-weight: bold;
+	font-size: 1.5rem;
+}
