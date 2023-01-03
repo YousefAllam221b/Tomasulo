@@ -335,7 +335,6 @@ function App() {
 				break;
 			}
 		}
-		console.log(freeStationKey);
 		return freeStationKey;
 	};
 
@@ -475,6 +474,7 @@ function App() {
 					}
 					if (AddAndSubStations[index].key === firstInReady.key) {
 						let newQueueArray = [...QueueArray];
+
 						newQueueArray[AddAndSubStations[index].instructionIndex].writeBack = Clock;
 						setQueueArray(newQueueArray);
 						let newAddAndSubStations = [...AddAndSubStations];
@@ -534,9 +534,9 @@ function App() {
 				}
 				for (let index = 0; index < StoreNumber; index++) {
 					if (firstInReady.key === StoreStations[index].Q) {
-						let newQueueArray = [...QueueArray];
-						newQueueArray[StoreStations[index].instructionIndex].writeBack = Clock;
-						setQueueArray(newQueueArray);
+						// let newQueueArray = [...QueueArray];
+						// newQueueArray[StoreStations[index].instructionIndex].writeBack = Clock;
+						// setQueueArray(newQueueArray);
 						let newStoreStations = [...StoreStations];
 						newStoreStations[index].Q = 0;
 						newStoreStations[index].V = firstInReady.value;
@@ -559,6 +559,10 @@ function App() {
 				Memory[firstInWrite.address] = firstInWrite.value;
 				for (let index = 0; index < StoreNumber; index++) {
 					if (StoreStations[index].key === firstInWrite.key) {
+						let newQueueArray = [...QueueArray];
+
+						newQueueArray[StoreStations[index].instructionIndex].writeBack = Clock;
+						setQueueArray(newQueueArray);
 						let newStoreStations = [...StoreStations];
 						newStoreStations[index].busy = 0;
 						newStoreStations[index].address = 0;
@@ -569,6 +573,7 @@ function App() {
 						setStoreStations(newStoreStations);
 					}
 				}
+
 				let newWriteMemory = [...WriteMemory].filter((write) => write.key !== firstInWrite.key);
 				setWriteMemory(newWriteMemory);
 			}
