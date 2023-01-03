@@ -4,18 +4,12 @@ import ALUStationsTable from "./ALUStationsTable";
 import LoadStationsTable from "./LoadStationsTable";
 import StoreStationsTable from "./StoreStationsTable";
 import { useEffect, useState } from "react";
-import { Button, Col, Container, Row } from "react-bootstrap";
+import { Button, Col, Container, ListGroup, ListGroupItem, Row } from "react-bootstrap";
 import RegisterFileTable from "./RegisterFileTable";
 import QueueTable from "./QueueTable";
+import SetupForm from "./SetupForm";
 function App() {
-	let instructions = [
-		"MUL.D R3 R1 R2",
-		"ADD.D R5 R3 R4",
-		"ADD.D R7 R2 R6",
-		"ADD.D R10 R8 R9",
-		"MUL.D R11 R7 R10",
-		"ADD.D R5 R5 R11",
-	];
+	const [instructions, setInstructions] = useState([]);
 
 	// Add, Sub, Div and Mul.
 	class ALUStation {
@@ -102,6 +96,7 @@ function App() {
 	const [ReadyRegisters, setReadyRegisters] = useState([]);
 	const [WriteMemory, setWriteMemory] = useState([]);
 	const [DetectChange, setDetectChange] = useState(false);
+	const [Start, setStart] = useState(false);
 
 	const handleSetup = () => {
 		fetchInstructions();
@@ -132,13 +127,14 @@ function App() {
 		}
 		setStoreStations(StoreStationsInitial);
 		for (let index = 0; index <= RegisterFileNumber; index++) {
-			let register = new Register("R" + index, 0, index);
+			let register = new Register("F" + index, 0, index);
 			RegisterFileInitial.push(register);
 		}
 
 		setRegisterFile(RegisterFileInitial);
 		MemoryInitial = Array(MemoryNumber).fill(0);
 		setMemory(MemoryInitial);
+		setStart(true);
 	};
 
 	let [Clock, setClock] = useState(0);
@@ -189,7 +185,7 @@ function App() {
 			if (MulAndDivStations[index].busy === 1) {
 				if (MulAndDivStations[index].Qj === 0 && MulAndDivStations[index].Qk === 0) {
 					switch (MulAndDivStations[index].op) {
-						case "MUL.D": {
+						case "MULT.D": {
 							if (MulAndDivStations[index].T === MulLatency) {
 								let newQueueArray = [...QueueArray];
 								newQueueArray[MulAndDivStations[index].instructionIndex].execStart = Clock + 1;
@@ -345,7 +341,7 @@ function App() {
 			if (MulAndDivStations[index].busy === 1) {
 				if (MulAndDivStations[index].T === -1) {
 					switch (MulAndDivStations[index].op) {
-						case "MUL.D": {
+						case "MULT.D": {
 							let result = MulAndDivStations[index].Vj * MulAndDivStations[index].Vk;
 							newReadyResults.push({
 								key: MulAndDivStations[index].key,
@@ -368,7 +364,6 @@ function App() {
 					newQueueArray[MulAndDivStations[index].instructionIndex].execEnd = Clock + 1;
 					setQueueArray(newQueueArray);
 				}
-
 			}
 		}
 		for (let index = 0; index < LoadNumber; index++) {
@@ -415,7 +410,7 @@ function App() {
 			let firstInWrite = WriteMemory.sort((a, b) => a.instructionIndex - b.instructionIndex)[0];
 			let isReady;
 			if (firstInReady && firstInWrite) {
-				isReady = firstInReady.instructionIndex > firstInWrite.instructionIndex ? true : false;
+				isReady = firstInReady.instructionIndex < firstInWrite.instructionIndex ? true : false;
 			} else if (firstInReady) isReady = true;
 			else if (firstInWrite) isReady = false;
 
@@ -583,7 +578,7 @@ function App() {
 					}
 
 					break;
-				case "MUL.D":
+				case "MULT.D":
 				case "DIV.D":
 					{
 						let stationKey = MulAndDivStationsChecker();
@@ -593,7 +588,7 @@ function App() {
 									let newMulAndDivStations = [...MulAndDivStations];
 									newMulAndDivStations[index].busy = 1;
 									newMulAndDivStations[index].op = opCode;
-									if (opCode === "MUL.D") newMulAndDivStations[index].T = MulLatency;
+									if (opCode === "MULT.D") newMulAndDivStations[index].T = MulLatency;
 									else newMulAndDivStations[index].T = DivLatency;
 
 									newMulAndDivStations[index].instructionIndex = QueueIndex;
@@ -680,34 +675,53 @@ function App() {
 
 	return (
 		<Container className="App">
-			<QueueTable instructions={QueueArray} />
-			<Row>
-				<Col sm={6}>
-					<h3 className="fitWidth">AddAndSubStations</h3>
-					<ALUStationsTable isAdd={true} stations={AddAndSubStations} key="AddAndSubStations" />
-				</Col>
-				<Col sm={6}>
-					<h3 className="fitWidth">MulAndDivStations</h3>
-					<ALUStationsTable isAdd={false} stations={MulAndDivStations} key="MulAndDivStations" />
-				</Col>
-			</Row>
-			<Row>
-				<Col sm={4}>
-					<h3 className="fitWidth">LoadStations</h3>
-					<LoadStationsTable stations={LoadStations} key="LoadStations" />
-					<h1>{Clock}</h1>
+			{!Start && (
+				<>
+					<SetupForm instructions={instructions} setInstructions={setInstructions} />
+					<ListGroup>
+						{instructions.map((instruction) => (
+							<ListGroupItem>{instruction}</ListGroupItem>
+						))}
+					</ListGroup>
 					<Button onClick={handleSetup}>Start</Button>
-					<Button onClick={runCycle}>Next Cycle</Button>
-				</Col>
-				<Col sm={4}>
-					<h3 className="fitWidth">StoreStations</h3>
-					<StoreStationsTable stations={StoreStations} key="StoreStations" />
-				</Col>
-				<Col className="ms-auto" sm={2}>
-					<h3 className="fitWidth">RegisterFile</h3>
-					<RegisterFileTable registers={RegisterFile} key="RegisterFile" />
-				</Col>
-			</Row>
+				</>
+			)}
+			{Start && (
+				<>
+					<QueueTable instructions={QueueArray} />
+					<Col className="ms-auto">
+						<h3 className="fitWidth">RegisterFile</h3>
+						<RegisterFileTable registers={RegisterFile} key="RegisterFile" />
+					</Col>
+					<Row>
+						<Col sm={6}>
+							<h3 className="fitWidth">AddAndSubStations</h3>
+							<ALUStationsTable isAdd={true} stations={AddAndSubStations} key="AddAndSubStations" />
+						</Col>
+						<Col sm={6}>
+							<h3 className="fitWidth">MulAndDivStations</h3>
+							<ALUStationsTable
+								isAdd={false}
+								stations={MulAndDivStations}
+								key="MulAndDivStations"
+							/>
+						</Col>
+					</Row>
+					<Row>
+						<Col sm={4}>
+							<h3 className="fitWidth">LoadStations</h3>
+							<LoadStationsTable stations={LoadStations} key="LoadStations" />
+							<h1>{Clock}</h1>
+
+							<Button onClick={runCycle}>Next Cycle</Button>
+						</Col>
+						<Col sm={4}>
+							<h3 className="fitWidth">StoreStations</h3>
+							<StoreStationsTable stations={StoreStations} key="StoreStations" />
+						</Col>
+					</Row>
+				</>
+			)}
 		</Container>
 	);
 }

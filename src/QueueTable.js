@@ -2,7 +2,7 @@ import { Table } from "react-bootstrap";
 
 export default function QueueTable({ instructions }) {
 	return (
-		<Table bordered hover>
+		<Table bordered hover className="mt-2">
 			<thead>
 				<tr>
 					<th>OpCode</th>
