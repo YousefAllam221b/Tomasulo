@@ -739,7 +739,9 @@ function App() {
 						{instructions.map((instruction, i) => (
 							<ListGroupItem className="d-flex justify-content-between" key={instruction}>
 								<h6 className="fitWidth">{instruction}</h6>
-								<Button onClick={() => handleDeleteInstruction(i)}>Delete</Button>
+								<Button variant="danger" onClick={() => handleDeleteInstruction(i)}>
+									Delete
+								</Button>
 							</ListGroupItem>
 						))}
 					</ListGroup>
