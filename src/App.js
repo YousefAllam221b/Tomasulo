@@ -1,4 +1,3 @@
-import logo from "./logo.svg";
 import "bootstrap/dist/css/bootstrap.css";
 import "./App.css";
 import ALUStationsTable from "./ALUStationsTable";
@@ -8,14 +7,7 @@ import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 import RegisterFileTable from "./RegisterFileTable";
 function App() {
-	let instructions = [
-		"L.D F6 1",
-		"L.D F2 2",
-		"MUL.D F0 F2 F4",
-		"SUB.D F8 F2 F6",
-		"DIV.D F10 F0 F6",
-		"ADD.D F6 F8 F2",
-	];
+	let instructions = ["L.D F0 80", "MUL.D F4 F0 F2", "S.D F4 80"];
 
 	// Add, Sub, Div and Mul.
 	class ALUStation {
@@ -120,7 +112,7 @@ function App() {
 		}
 		setLoadStations(LoadStationsInitial);
 		for (let index = 1; index <= StoreNumber; index++) {
-			let station = new StoreStation("L" + index, 0, 0, 0, 0, 0, 0);
+			let station = new StoreStation("S" + index, 0, 0, 0, 0, 0, 0);
 			StoreStationsInitial.push(station);
 		}
 		setStoreStations(StoreStationsInitial);
@@ -128,21 +120,20 @@ function App() {
 			let register = new Register("F" + index, 0, 0, 0, 0, 0, 0);
 			RegisterFileInitial.push(register);
 		}
-		RegisterFileInitial[4].V = 4;
-		console.log(RegisterFileInitial);
+		RegisterFileInitial[2].V = 2;
 		setRegisterFile(RegisterFileInitial);
 		MemoryInitial = Array(MemoryNumber).fill(0);
-		MemoryInitial[1] = 5;
-		MemoryInitial[2] = 10;
+		MemoryInitial[80] = 5;
+		// MemoryInitial[2] = 10;
 
 		setMemory(MemoryInitial);
 	};
 	// Initializing Stations, Memory and RegisterFile Data Structures
 
 	// Stations Latency
-	const LoadAndStoreLatency = 2;
+	const LoadAndStoreLatency = 8;
 	const AddAndSubLatency = 2;
-	const MulLatency = 10;
+	const MulLatency = 4;
 	const DivLatency = 40;
 
 	let [Clock, setClock] = useState(0);
@@ -205,7 +196,6 @@ function App() {
 				if (StoreStations[index].Q == 0) {
 					StoreStations[index].T -= 1;
 					let newStoreStations = [...StoreStations];
-					newStoreStations[index].T -= 1;
 					setStoreStations(newStoreStations);
 				}
 			}
@@ -371,9 +361,10 @@ function App() {
 			if (StoreStations[index].busy === 1 && StoreStations[index].T === -1) {
 				let result = StoreStations[index].V;
 				newWriteMemory.push({
-					key: StoreStations[index].address,
+					address: StoreStations[index].address,
 					value: result,
 					instructionIndex: StoreStations[index].instructionIndex,
+					key: StoreStations[index].key,
 				});
 				// let newStoreStations = [...StoreStations];
 				// newStoreStations[index].busy = 0;
@@ -391,14 +382,10 @@ function App() {
 	};
 
 	useEffect(() => {
-		console.log(ReadyRegisters);
 		if (ReadyRegisters.length !== 0 || WriteMemory.length !== 0) {
-			console.log("i am there");
 			let firstInReady = ReadyRegisters.sort((a, b) => a.instructionIndex - b.instructionIndex)[0];
 			let firstInWrite = WriteMemory.sort((a, b) => a.instructionIndex - b.instructionIndex)[0];
 			let isReady;
-			console.log(firstInReady);
-			console.log("////////////");
 			if (firstInReady && firstInWrite) {
 				isReady = firstInReady.instructionIndex > firstInWrite.instructionIndex ? true : false;
 			} else if (firstInReady) {
@@ -489,7 +476,8 @@ function App() {
 				);
 				setReadyRegisters(newReadyRegisters);
 			} else {
-				Memory[firstInWrite.key] = firstInWrite.value;
+				console.log(firstInWrite);
+				Memory[firstInWrite.address] = firstInWrite.value;
 				for (let index = 0; index < StoreNumber; index++) {
 					if (StoreStations[index].key === firstInWrite.key) {
 						let newStoreStations = [...StoreStations];
@@ -497,8 +485,8 @@ function App() {
 						newStoreStations[index].address = 0;
 						newStoreStations[index].V = 0;
 						newStoreStations[index].Q = 0;
+						newStoreStations[index].T = 0;
 						newStoreStations[index].instructionIndex = 0;
-
 						setStoreStations(newStoreStations);
 					}
 				}
@@ -512,9 +500,7 @@ function App() {
 		decrementTime();
 		checkFinished();
 		if (QueueIndex !== QueueArray.length) {
-			// console.log(QueueIndex);
 			let currentInstruction = QueueArray[QueueIndex];
-			// console.log(currentInstruction);
 			let opCode = currentInstruction.op;
 			let destination = currentInstruction.destination;
 			let src1 = currentInstruction.src1;
@@ -642,22 +628,7 @@ function App() {
 					break;
 			}
 		}
-		// console.log("AddAndSubStations: ");
-		// console.log(AddAndSubStations);
-		// console.log("MulAndDivStations: ");
-		// console.log(MulAndDivStations);
-		// console.log("LoadStations: ");
-		// console.log(LoadStations);
-		// console.log("StoreStations: ");
-		// console.log(StoreStations);
-		// console.log("RegisterFile: ");
-		// console.log(RegisterFile);
-		// console.log("Queue: ");
-		// console.log(QueueArray);
-		// console.log(Memory);
-		// console.log("/////////////////////////");
 		setClock(Clock + 1);
-		console.log(RegisterFile);
 	};
 
 	return (
