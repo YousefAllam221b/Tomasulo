@@ -85,7 +85,7 @@ function App() {
 	// Number of Stations, Size of Memory and Size of Register File.
 	const AddAndSubNumber = 3;
 	const MulAndDivNumber = 2;
-	const RegisterFileNumber = 11;
+	const RegisterFileNumber = 63;
 	const LoadNumber = 3;
 	const StoreNumber = 3;
 	const MemoryNumber = 100;
@@ -132,21 +132,12 @@ function App() {
 		}
 		setStoreStations(StoreStationsInitial);
 		for (let index = 0; index <= RegisterFileNumber; index++) {
-			let register = new Register("R" + index, 0, 0, 0, 0, 0, 0);
+			let register = new Register("R" + index, 0, index);
 			RegisterFileInitial.push(register);
 		}
-		RegisterFileInitial[1].V = 1;
-		RegisterFileInitial[2].V = 2;
-		RegisterFileInitial[4].V = 4;
-		RegisterFileInitial[6].V = 6;
-		RegisterFileInitial[8].V = 8;
-		RegisterFileInitial[9].V = 9;
 
 		setRegisterFile(RegisterFileInitial);
 		MemoryInitial = Array(MemoryNumber).fill(0);
-		MemoryInitial[80] = 5;
-		// MemoryInitial[2] = 10;
-
 		setMemory(MemoryInitial);
 	};
 
@@ -250,20 +241,10 @@ function App() {
 
 	// Gets the Value or Q (the Key) of the station that the Register is waiting for.
 	const getRegisterValue = (key) => {
-		console.log("/////////////////////////");
-
-		console.log("########################");
-		console.log(key);
-		console.log("########################");
 		for (let index = 0; index <= RegisterFileNumber; index++) {
 			if (RegisterFile[index].key === key) {
-				if (RegisterFile[index].Q === 0) {
-					console.log(RegisterFile[index].V);
-					return RegisterFile[index].V;
-				} else {
-					console.log(RegisterFile[index].Q);
-					return RegisterFile[index].Q;
-				}
+				if (RegisterFile[index].Q === 0) return RegisterFile[index].V;
+				else return RegisterFile[index].Q;
 			}
 		}
 	};
@@ -358,15 +339,6 @@ function App() {
 					newQueueArray[AddAndSubStations[index].instructionIndex].execEnd = Clock + 1;
 					setQueueArray(newQueueArray);
 				}
-				// let newAddAndSubStations = [...AddAndSubStations];
-				// newAddAndSubStations[index].busy = 0;
-				// newAddAndSubStations[index].Qj = 0;
-				// newAddAndSubStations[index].Qk = 0;
-				// newAddAndSubStations[index].Vj = 0;
-				// newAddAndSubStations[index].Vk = 0;
-				// newAddAndSubStations[index].T = 0;
-				// newAddAndSubStations[index].instructionIndex = 0;
-				// setAddAndSubStations(newAddAndSubStations);
 			}
 		}
 		for (let index = 0; index < MulAndDivNumber; index++) {
@@ -397,16 +369,6 @@ function App() {
 					setQueueArray(newQueueArray);
 				}
 
-				// let newMulAndDivStations = [...MulAndDivStations];
-				// newMulAndDivStations[index].busy = 0;
-				// newMulAndDivStations[index].Qj = 0;
-				// newMulAndDivStations[index].Qk = 0;
-				// newMulAndDivStations[index].Vj = 0;
-				// newMulAndDivStations[index].Vk = 0;
-				// newMulAndDivStations[index].T = 0;
-				// newMulAndDivStations[index].instructionIndex = 0;
-
-				// setMulAndDivStations(newMulAndDivStations);
 			}
 		}
 		for (let index = 0; index < LoadNumber; index++) {
@@ -423,12 +385,6 @@ function App() {
 					newQueueArray[LoadStations[index].instructionIndex].execEnd = Clock + 1;
 					setQueueArray(newQueueArray);
 				}
-				// let newLoadStations = [...LoadStations];
-				// newLoadStations[index].busy = 0;
-				// newLoadStations[index].address = 0;
-				// newLoadStations[index].instructionIndex = 0;
-
-				// setLoadStations(newLoadStations);
 			}
 		}
 		for (let index = 0; index < StoreNumber; index++) {
@@ -446,14 +402,6 @@ function App() {
 					newQueueArray[StoreStations[index].instructionIndex].execEnd = Clock + 1;
 					setQueueArray(newQueueArray);
 				}
-				// let newStoreStations = [...StoreStations];
-				// newStoreStations[index].busy = 0;
-				// newStoreStations[index].address = 0;
-				// newStoreStations[index].V = 0;
-				// newStoreStations[index].Q = 0;
-				// newStoreStations[index].instructionIndex = 0;
-
-				// setStoreStations(newStoreStations);
 			}
 		}
 		setReadyRegisters([...ReadyRegisters, ...newReadyResults]);
@@ -554,7 +502,7 @@ function App() {
 						setStoreStations(newStoreStations);
 					}
 				}
-				for (let index = 0; index < RegisterFileNumber; index++) {
+				for (let index = 0; index <= RegisterFileNumber; index++) {
 					if (firstInReady.key === RegisterFile[index].Q) {
 						let newRegisterFile = [...RegisterFile];
 						newRegisterFile[index].Q = 0;
