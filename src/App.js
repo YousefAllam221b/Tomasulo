@@ -758,7 +758,7 @@ function App() {
 					<QueueTable instructions={QueueArray} />
 					<Col className="ms-auto">
 						<h3 className="fitWidth">RegisterFile</h3>
-						<RegisterFileTable registers={RegisterFile} key="RegisterFile" />
+						<RegisterFileTable registers={RegisterFile} memory={false} key="RegisterFile" />
 					</Col>
 					<Row>
 						<Col sm={6}>
@@ -778,15 +778,21 @@ function App() {
 						<Col sm={4}>
 							<h3 className="fitWidth">LoadStations</h3>
 							<LoadStationsTable stations={LoadStations} key="LoadStations" />
-							<h1>{Clock}</h1>
-
-							<Button onClick={runCycle}>Next Cycle</Button>
 						</Col>
 						<Col sm={4}>
 							<h3 className="fitWidth">StoreStations</h3>
 							<StoreStationsTable stations={StoreStations} key="StoreStations" />
 						</Col>
+						<Col className="d-flex flex-column justify-content-center align-items-center" sm={4}>
+							<h1>{Clock}</h1>
+
+							<Button onClick={runCycle}>Next Cycle</Button>
+						</Col>
 					</Row>
+					<Col className="ms-auto">
+						<h3 className="fitWidth">Memory</h3>
+						<RegisterFileTable registers={Memory} memory={true} key="RegisterFile" />
+					</Col>
 				</>
 			)}
 		</Container>
